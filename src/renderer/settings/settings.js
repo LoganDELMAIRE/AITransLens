@@ -197,9 +197,21 @@ $('btn-reset').addEventListener('click', async () => {
   setStatus('Paramètres réinitialisés.', 'ok');
 });
 
+/* ---- Démarrage automatique ---- */
+$('startup').addEventListener('change', async () => {
+  await window.api.setLoginItem($('startup').checked);
+});
+
 /* ---- Init ---- */
 (async () => {
   const cfg = await window.api.getConfig();
   currentHotkey = cfg.hotkey || DEFAULTS.hotkey;
   fillForm(cfg);
+
+  if (window.api.platform === 'win32' || window.api.platform === 'darwin') {
+    $('startup').checked = await window.api.getLoginItem();
+  } else {
+    // Linux : cacher l'option (non supporté)
+    $('startup').closest('.field-row').style.display = 'none';
+  }
 })();

@@ -1,7 +1,7 @@
 {
   "name": "aitranslens",
   "version": "1.0.0",
-  "description": "AI-powered translation overlay using Gemini API",
+  "description": "AITransLens - AI Translation Tool",
   "main": "src/main.js",
   "scripts": {
     "start": "electron .",

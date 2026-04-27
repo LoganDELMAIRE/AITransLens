@@ -344,6 +344,11 @@ app.whenReady().then(() => {
 
   ipcMain.handle('open-external', (_, url) => shell.openExternal(url));
 
+  ipcMain.handle('get-login-item', () => app.getLoginItemSettings().openAtLogin);
+  ipcMain.handle('set-login-item', (_, enable) => {
+    app.setLoginItemSettings({ openAtLogin: enable });
+  });
+
   ipcMain.handle('trigger-translation', () => triggerTranslation());
   ipcMain.handle('close-mini-button',   () => hideMiniButton());
 

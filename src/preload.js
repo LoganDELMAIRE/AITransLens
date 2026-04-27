@@ -35,4 +35,8 @@ contextBridge.exposeInMainWorld('api', {
 
   // Remplacement du texte sélectionné
   replaceSelectedText: (translation) => ipcRenderer.invoke('replace-selected-text', translation),
+
+  // Démarrage automatique
+  getLoginItem: () => ipcRenderer.invoke('get-login-item'),
+  setLoginItem: (enable) => ipcRenderer.invoke('set-login-item', enable),
 });
