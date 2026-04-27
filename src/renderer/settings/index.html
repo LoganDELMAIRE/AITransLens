@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'">
+  <title>Paramètres — AITransLens</title>
+  <link rel="stylesheet" href="settings.css">
+</head>
+<body>
+  <div id="app">
+
+    <!-- En-tête -->
+    <header class="page-header">
+      <div class="logo-wrap">
+        <div class="logo-icon">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"/>
+            <line x1="2" y1="12" x2="22" y2="12"/>
+            <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
+          </svg>
+        </div>
+        <div>
+          <h1>AITransLens</h1>
+          <p class="subtitle">Paramètres</p>
+        </div>
+      </div>
+      <div class="hotkey-badge" id="hotkey-badge">—</div>
+    </header>
+
+    <!-- Contenu -->
+    <main class="content">
+
+      <!-- Section API -->
+      <section class="card">
+        <h2 class="section-title">API Gemini</h2>
+
+        <div class="field">
+          <label for="api-key">Clé API</label>
+          <div class="input-row">
+            <input type="password" id="api-key" placeholder="AIzaSy…" autocomplete="off" spellcheck="false">
+            <button class="btn-ghost" id="toggle-key">Afficher</button>
+          </div>
+          <p class="hint">
+            Obtenez votre clé sur
+            <button class="link-btn" id="link-studio">Google AI Studio</button>
+            (gratuit)
+          </p>
+        </div>
+
+        <div class="field">
+          <label for="model">Modèle</label>
+          <select id="model">
+            <option value="gemini-2.5-flash">gemini-2.5-flash — rapide, recommandé</option>
+            <option value="gemini-2.5-flash-lite">gemini-2.5-flash-lite — économique</option>
+            <option value="gemini-2.5-pro">gemini-2.5-pro — haute qualité</option>
+            <option value="gemini-3-flash-preview">gemini-3-flash-preview — dernière génération</option>
+            <option value="gemini-3.1-flash-lite-preview">gemini-3.1-flash-lite-preview — léger, rapide</option>
+          </select>
+        </div>
+
+        <div class="test-row">
+          <button class="btn secondary" id="btn-test">Tester la connexion</button>
+          <span id="test-result" class="test-result"></span>
+        </div>
+      </section>
+
+      <!-- Section Traduction -->
+      <section class="card">
+        <h2 class="section-title">Traduction</h2>
+
+        <div class="lang-row">
+          <div class="field flex1">
+            <label for="source-lang">Langue source</label>
+            <select id="source-lang"></select>
+          </div>
+          <div class="lang-sep">→</div>
+          <div class="field flex1">
+            <label for="target-lang">Langue cible</label>
+            <select id="target-lang"></select>
+          </div>
+        </div>
+      </section>
+
+      <!-- Section Overlay -->
+      <section class="card">
+        <h2 class="section-title">Overlay</h2>
+
+        <div class="field">
+          <label>Raccourci clavier</label>
+          <input type="text" id="hotkey" placeholder="Cliquez puis appuyez sur une combinaison…" readonly>
+          <p class="hint">Ex : Ctrl+Shift+T &nbsp;·&nbsp; Ctrl+Shift+Space</p>
+        </div>
+
+        <div class="field">
+          <label for="auto-dismiss">Fermeture automatique</label>
+          <select id="auto-dismiss">
+            <option value="5">5 secondes</option>
+            <option value="10">10 secondes</option>
+            <option value="15">15 secondes</option>
+            <option value="30">30 secondes</option>
+            <option value="0">Jamais</option>
+          </select>
+        </div>
+
+        <div class="field">
+          <label>
+            Opacité
+            <span class="value-label" id="opacity-label">97%</span>
+          </label>
+          <input type="range" id="opacity" min="50" max="100" step="1" value="97">
+        </div>
+      </section>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="page-footer">
+      <p id="status-msg" class="status-msg" aria-live="polite"></p>
+      <div class="footer-actions">
+        <button class="btn secondary" id="btn-reset">Réinitialiser</button>
+        <button class="btn primary"   id="btn-save">Enregistrer</button>
+      </div>
+    </footer>
+
+  </div>
+  <script src="settings.js"></script>
+</body>
+</html>
