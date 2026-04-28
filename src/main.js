@@ -246,8 +246,21 @@ async function triggerTranslation() {
   createOverlayWindow();
 
   try {
-    const translation = await getTranslator().translate(text, sourceLang, targetLang);
-    const data = { originalText: text, translatedText: translation, sourceLang, targetLang, loading: false };
+    let data;
+    if (sourceLang !== 'auto') {
+      // Détecte automatiquement laquelle des deux langues est la source, traduit vers l'autre
+      const result = await getTranslator().translateSmart(text, sourceLang, targetLang);
+      data = {
+        originalText: text,
+        translatedText: result.translation,
+        sourceLang: result.sourceLang,
+        targetLang: result.targetLang,
+        loading: false,
+      };
+    } else {
+      const translation = await getTranslator().translate(text, sourceLang, targetLang);
+      data = { originalText: text, translatedText: translation, sourceLang, targetLang, loading: false };
+    }
     pendingData = data;
     if (overlayWindow && !overlayWindow.isDestroyed()) {
       overlayWindow.webContents.send('show-translation', data);

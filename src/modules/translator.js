@@ -33,6 +33,7 @@ class Translator {
     this._config = config;
     this._model = null;
     this._cache = new Map();
+    this._smartCache = new Map();
     this._cacheLimit = 50;
   }
 
@@ -133,10 +134,60 @@ class Translator {
     return err;
   }
 
+  /**
+   * Détecte laquelle de lang1/lang2 est la langue du texte, puis traduit vers l'autre.
+   * Un seul appel Gemini pour les deux opérations.
+   * @param {string} text
+   * @param {string} lang1  code ISO 639-1 (ex: 'en')
+   * @param {string} lang2  code ISO 639-1 (ex: 'fr')
+   * @returns {Promise<{sourceLang: string, targetLang: string, translation: string}>}
+   */
+  async translateSmart(text, lang1, lang2) {
+    if (!this._model) this._init();
+    const trimmed = text.trim();
+    if (!trimmed) return { sourceLang: lang1, targetLang: lang2, translation: '' };
+
+    const cacheKey = `${trimmed}||${lang1}||${lang2}`;
+    if (this._smartCache.has(cacheKey)) return this._smartCache.get(cacheKey);
+
+    const name1 = LANG_NAMES[lang1] || lang1;
+    const name2 = LANG_NAMES[lang2] || lang2;
+
+    const prompt = `The following text is written in either ${name1} or ${name2}. Detect which one, then translate it to the other language.
+Respond with valid JSON only (no markdown, no code blocks):
+{"detected":"<${lang1} or ${lang2}>","translation":"<translated text>"}
+
+Text: ${trimmed}`;
+
+    try {
+      const result = await this._model.generateContent(prompt);
+      const raw = result.response.text().trim()
+        .replace(/^```(?:json)?\n?/, '').replace(/\n?```$/, '');
+
+      const parsed = JSON.parse(raw);
+      const src = String(parsed.detected || '').trim();
+      const detectedSource = src === lang2 ? lang2 : lang1;
+      const detectedTarget = detectedSource === lang1 ? lang2 : lang1;
+      const translation = String(parsed.translation || '').trim();
+
+      const entry = { sourceLang: detectedSource, targetLang: detectedTarget, translation };
+      if (this._smartCache.size >= this._cacheLimit) {
+        this._smartCache.delete(this._smartCache.keys().next().value);
+      }
+      this._smartCache.set(cacheKey, entry);
+      return entry;
+    } catch (err) {
+      // Fallback : appel simple sans détection
+      const translation = await this.translate(trimmed, lang1, lang2);
+      return { sourceLang: lang1, targetLang: lang2, translation };
+    }
+  }
+
   /** Invalide le modèle (ex: changement de clé API) */
   invalidate() {
     this._model = null;
     this._cache.clear();
+    this._smartCache.clear();
   }
 }
 
