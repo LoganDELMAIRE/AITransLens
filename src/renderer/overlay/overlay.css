@@ -104,6 +104,22 @@ html, body {
 }
 .lang-pill.accent { color: var(--accent); }
 
+.lang-target-select {
+  min-width: 62px;
+  background: transparent;
+  border: none;
+  color: var(--accent);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+  padding: 0;
+  font-family: var(--font);
+  outline: none;
+  cursor: pointer;
+  -webkit-app-region: no-drag;
+}
+
 .btn-swap {
   display: flex;
   align-items: center;

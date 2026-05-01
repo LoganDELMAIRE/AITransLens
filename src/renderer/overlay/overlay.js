@@ -9,9 +9,15 @@ const LANG_LABELS = {
   uk: 'UK', vi: 'VI',
 };
 
+const TARGET_LANGUAGES = [
+  'en', 'fr', 'es', 'de', 'it', 'pt', 'ru', 'ja', 'ko', 'zh',
+  'ar', 'hi', 'nl', 'pl', 'sv', 'tr', 'da', 'fi', 'cs', 'uk', 'vi',
+];
+
 /* ---- État ---- */
 let currentTranslation = '';
 let currentState = { originalText: '', translatedText: '', sourceLang: 'auto', targetLang: 'fr' };
+let syncingTargetSelect = false;
 
 /* ---- Helpers ---- */
 function $(id) { return document.getElementById(id); }
@@ -20,6 +26,24 @@ function langLabel(code) { return LANG_LABELS[code] || code.toUpperCase(); }
 
 function truncate(text, max = 100) {
   return text.length > max ? text.slice(0, max) + '…' : text;
+}
+
+function renderTargetSelect(selectedCode) {
+  const select = $('target-lang-select');
+  const options = TARGET_LANGUAGES.includes(selectedCode)
+    ? TARGET_LANGUAGES
+    : [...TARGET_LANGUAGES, selectedCode];
+
+  syncingTargetSelect = true;
+  select.innerHTML = '';
+  for (const code of options) {
+    const opt = document.createElement('option');
+    opt.value = code;
+    opt.textContent = langLabel(code);
+    if (code === selectedCode) opt.selected = true;
+    select.appendChild(opt);
+  }
+  syncingTargetSelect = false;
 }
 
 /* ---- Affichage ---- */
@@ -52,7 +76,6 @@ function showError(msg) {
 
 /* ---- Événements ---- */
 
-// Copier la traduction
 $('btn-copy').addEventListener('click', async () => {
   if (!currentTranslation) return;
   await window.api.copyToClipboard(currentTranslation);
@@ -61,21 +84,47 @@ $('btn-copy').addEventListener('click', async () => {
   setTimeout(() => { label.textContent = 'Copier'; }, 2000);
 });
 
-// Remplacer le texte sélectionné
 $('btn-replace').addEventListener('click', async () => {
   if (!currentTranslation) return;
   await window.api.replaceSelectedText(currentTranslation);
 });
 
-// Fermer
 $('btn-close').addEventListener('click', () => window.api.closeOverlay());
-
-// Ouvrir les paramètres
 $('btn-settings').addEventListener('click', () => window.api.openSettings());
 
-// Touche Échap pour fermer
 document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape') window.api.closeOverlay();
+});
+
+// Empêche le blur du dropdown de fermer la popup
+$('target-lang-select').addEventListener('mousedown', () => {
+  window.api.setOverlayBlurGuard(1400);
+});
+
+$('target-lang-select').addEventListener('change', async () => {
+  if (syncingTargetSelect) return;
+
+  const selectedTarget = $('target-lang-select').value;
+  if (!selectedTarget || selectedTarget === currentState.targetLang) return;
+  if (!currentState.originalText) return;
+
+  currentState.targetLang = selectedTarget;
+  currentState.translatedText = '';
+  $('btn-swap').disabled = true;
+  showLoading();
+
+  await window.api.saveConfig({ targetLang: selectedTarget });
+
+  try {
+    const sourceLang = currentState.sourceLang === 'auto' ? 'auto' : currentState.sourceLang;
+    const translation = await window.api.translate(currentState.originalText, sourceLang, selectedTarget);
+    currentState.translatedText = translation;
+    $('btn-swap').disabled = (currentState.sourceLang === 'auto');
+    showResult(translation);
+  } catch (err) {
+    $('btn-swap').disabled = (currentState.sourceLang === 'auto');
+    showError(err.message);
+  }
 });
 
 /* ---- Swap ---- */
@@ -86,20 +135,18 @@ $('btn-swap').addEventListener('click', async () => {
   const newTgt = currentState.sourceLang;
   const newText = currentState.translatedText;
 
-  // Met à jour l'affichage immédiatement
   currentState.sourceLang = newSrc;
   currentState.targetLang = newTgt;
   currentState.originalText = newText;
   currentState.translatedText = '';
 
   $('source-lang').textContent = langLabel(newSrc);
-  $('target-lang').textContent = langLabel(newTgt);
+  renderTargetSelect(newTgt);
   $('source-text').textContent = truncate(newText);
   $('btn-swap').disabled = true;
 
   showLoading();
 
-  // Sauvegarde + retraduction
   await window.api.saveConfig({ sourceLang: newSrc, targetLang: newTgt });
   try {
     const translation = await window.api.translate(newText, newSrc, newTgt);
@@ -118,12 +165,10 @@ window.api.onShowTranslation((data) => {
 
   $('source-text').textContent = truncate(originalText);
   $('source-lang').textContent = langLabel(sourceLang);
-  $('target-lang').textContent = langLabel(targetLang);
+  renderTargetSelect(targetLang);
 
-  // Bouton swap désactivé si source = auto ou pas encore de traduction
   $('btn-swap').disabled = (sourceLang === 'auto' || loading);
 
-  // Mémorise l'état pour le swap
   if (!loading) {
     currentState = { originalText, translatedText: translatedText || '', sourceLang, targetLang };
   }
@@ -138,4 +183,5 @@ window.api.onShowTranslation((data) => {
 });
 
 /* ---- Init ---- */
+renderTargetSelect(currentState.targetLang);
 window.api.overlayReady();

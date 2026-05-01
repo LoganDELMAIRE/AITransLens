@@ -134,6 +134,7 @@ function startSelectionMonitor() {
 // Fallback clipboard polling (non-Windows ou UIAutomation indisponible)
 let clipboardPoller = null;
 let lastClipboardText = '';
+let overlayBlurGuardUntil = 0;
 
 function startClipboardPollingFallback() {
   lastClipboardText = clipboard.readText();
@@ -161,6 +162,7 @@ function createOverlayWindow() {
   }
 
   hideMiniButton();
+  overlayBlurGuardUntil = Date.now() + 1200;
 
   const W = 480, H = 260;
 
@@ -187,16 +189,24 @@ function createOverlayWindow() {
   overlayWindow.once('ready-to-show', () => {
     positionNearCursor(overlayWindow, W, H);
     overlayWindow.show();
+    app.focus({ steal: true });
     overlayWindow.focus();
-    // Délai avant d'activer blur-to-close : sur Windows, focus() peut déclencher
-    // un blur transitoire pendant la mise en avant-plan de la fenêtre
-    setTimeout(() => {
-      if (overlayWindow && !overlayWindow.isDestroyed()) {
-        overlayWindow.on('blur', () => {
-          if (overlayWindow && !overlayWindow.isDestroyed()) overlayWindow.close();
-        });
-      }
-    }, 350);
+
+    overlayWindow.on('blur', () => {
+      if (!overlayWindow || overlayWindow.isDestroyed()) return;
+      if (Date.now() < overlayBlurGuardUntil) return;
+      overlayWindow.close();
+    });
+
+    // Si blur a déjà tiré pendant le guard (focus volé par l'app source),
+    // on vérifie une fois après expiration pour fermer si toujours sans focus.
+    const checkAfterGuard = () => {
+      if (!overlayWindow || overlayWindow.isDestroyed()) return;
+      const remaining = overlayBlurGuardUntil - Date.now();
+      if (remaining > 0) { setTimeout(checkAfterGuard, remaining + 50); return; }
+      if (!overlayWindow.isFocused()) overlayWindow.close();
+    };
+    setTimeout(checkAfterGuard, overlayBlurGuardUntil - Date.now() + 50);
   });
 
   overlayWindow.on('closed', () => { overlayWindow = null; });
@@ -351,6 +361,10 @@ app.whenReady().then(() => {
 
   ipcMain.handle('close-overlay', () => {
     if (overlayWindow && !overlayWindow.isDestroyed()) overlayWindow.close();
+  });
+
+  ipcMain.handle('set-overlay-blur-guard', (_, ms = 800) => {
+    overlayBlurGuardUntil = Date.now() + Math.max(0, Number(ms) || 0);
   });
 
   ipcMain.handle('open-settings', () => createSettingsWindow());

@@ -16,6 +16,7 @@ contextBridge.exposeInMainWorld('api', {
   // Window actions
   closeOverlay: () => ipcRenderer.invoke('close-overlay'),
   openSettings: () => ipcRenderer.invoke('open-settings'),
+  setOverlayBlurGuard: (ms) => ipcRenderer.invoke('set-overlay-blur-guard', ms),
 
   // Overlay → Main: signal que le renderer est prêt
   overlayReady: () => ipcRenderer.send('overlay-ready'),
