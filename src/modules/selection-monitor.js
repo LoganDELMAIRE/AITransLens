@@ -44,8 +44,12 @@ class SelectionMonitor extends EventEmitter {
         const trimmed = line.trim();
         if (!trimmed) continue;
         try {
-          const { text } = JSON.parse(trimmed);
-          this.emit('selection', text || '');
+          const parsed = JSON.parse(trimmed);
+          if ('text' in parsed) {
+            this.emit('selection', parsed.text || '');
+          } else if (parsed.mousedown) {
+            this.emit('mousedown');
+          }
         } catch {
           // ligne mal formée, ignorée
         }

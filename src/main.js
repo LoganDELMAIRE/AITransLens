@@ -73,7 +73,7 @@ function showMiniButton() {
     alwaysOnTop: true,
     skipTaskbar: true,
     resizable: false,
-    focusable: true,
+    focusable: false, // ne vole jamais le focus → l'app source garde sa sélection active
     show: false,
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
@@ -87,7 +87,10 @@ function showMiniButton() {
 
   miniButtonWindow.once('ready-to-show', () => {
     positionNearCursor(miniButtonWindow, 110, 30, 18);
-    miniButtonWindow.showInactive(); // n'arrache pas le focus à l'app source
+    miniButtonWindow.showInactive();
+
+    // focusable:false → blur ne se déclenche jamais.
+    // La fermeture "click ailleurs" est gérée par l'event 'mousedown' émis par le PS1.
   });
 
   miniButtonWindow.on('closed', () => { miniButtonWindow = null; });
@@ -104,17 +107,18 @@ function hideMiniButton() {
 // ---------------------------------------------------------------------------
 
 let hideDebounce = null;
+// true quand UIAutomation gère la sélection active → le clipboard poller cède la priorité
+let uiaSelectionActive = false;
 
 function startSelectionMonitor() {
   selectionMonitor.on('selection', (text) => {
     if (text) {
-      // Annule un éventuel masquage en cours (ex: focus vers mini bouton)
       if (hideDebounce) { clearTimeout(hideDebounce); hideDebounce = null; }
       capturedText = text;
+      uiaSelectionActive = true;
       showMiniButton();
     } else {
-      // Délai avant masquage : évite de fermer le bouton pendant qu'on clique dessus
-      // (UIAutomation détecte le changement de focus ~200ms avant que le clic soit traité)
+      uiaSelectionActive = false;
       if (hideDebounce) clearTimeout(hideDebounce);
       hideDebounce = setTimeout(() => {
         hideDebounce = null;
@@ -123,12 +127,25 @@ function startSelectionMonitor() {
     }
   });
 
-  // Si UIAutomation n'est pas dispo, fallback sur le polling presse-papier
-  selectionMonitor.on('unavailable', () => {
-    startClipboardPollingFallback();
+  selectionMonitor.on('unavailable', () => { /* clipboard polling prend le relais seul */ });
+
+  // Ferme le mini bouton si l'utilisateur clique en dehors (focusable:false → pas de blur)
+  selectionMonitor.on('mousedown', () => {
+    if (!miniButtonWindow || miniButtonWindow.isDestroyed()) return;
+    const cursor = screen.getCursorScreenPoint();
+    const [bx, by] = miniButtonWindow.getPosition();
+    const [bw, bh] = miniButtonWindow.getSize();
+    const inside = cursor.x >= bx && cursor.x <= bx + bw
+                && cursor.y >= by && cursor.y <= by + bh;
+    if (!inside) hideMiniButton();
   });
 
   selectionMonitor.start();
+
+  // Toujours actif en complément de UIAutomation.
+  // Couvre Discord, Teams, et toutes les apps sans UIAutomation TextPattern.
+  // Le PS1 envoie ^c via détection souris pour ces apps ; le poller attrape le résultat.
+  startClipboardPollingFallback();
 }
 
 // Fallback clipboard polling (non-Windows ou UIAutomation indisponible)
@@ -140,6 +157,9 @@ function startClipboardPollingFallback() {
   lastClipboardText = clipboard.readText();
 
   clipboardPoller = setInterval(() => {
+    // UIAutomation gère la sélection → ne pas interférer avec capturedText
+    if (uiaSelectionActive) return;
+
     const text = clipboard.readText().trim();
     if (text && text !== lastClipboardText) {
       lastClipboardText = text;
@@ -245,9 +265,9 @@ function createSettingsWindow() {
 // ---------------------------------------------------------------------------
 
 async function triggerTranslation() {
-  // Priorité : texte capturé à l'affichage du bouton, sinon presse-papier
+  uiaSelectionActive = false; // libère le clipboard poller pour la prochaine sélection
   const text = (capturedText || clipboard.readText()).trim();
-  capturedText = ''; // reset après usage pour ne pas réutiliser le même texte
+  capturedText = '';
   if (!text) return;
 
   const { sourceLang, targetLang } = config.getAll();

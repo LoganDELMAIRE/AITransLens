@@ -4,7 +4,5 @@ document.getElementById('btn').addEventListener('click', () => {
   window.api.triggerTranslation();
 });
 
-// Ferme si on clique ailleurs (perte de focus)
-window.addEventListener('blur', () => {
-  window.api.closeMiniButton();
-});
+// La fenêtre est focusable:false → blur ne se déclenche jamais.
+// La fermeture est gérée par UIAutomation (déselection) ou le timer 4s (Discord).
