@@ -1,0 +1,6 @@
+<resources>
+    <string name="app_name">AITransLens</string>
+    <string name="accessibility_service_description">AITransLens détecte le texte sélectionné dans les autres applications pour afficher un bouton de traduction rapide.</string>
+    <string name="accessibility_service_summary">Bouton de traduction rapide</string>
+</resources>
+
