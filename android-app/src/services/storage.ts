@@ -5,6 +5,8 @@ export interface AppConfig {
   model: string;
   sourceLang: string;
   targetLang: string;
+  correctionStyle: string;
+  correctionLang: string;
 }
 
 const DEFAULTS: AppConfig = {
@@ -12,6 +14,8 @@ const DEFAULTS: AppConfig = {
   model: 'gemini-2.5-flash',
   sourceLang: 'auto',
   targetLang: 'fr',
+  correctionStyle: 'standard',
+  correctionLang: 'auto',
 };
 
 const STORAGE_KEY = '@aitranslens:config';

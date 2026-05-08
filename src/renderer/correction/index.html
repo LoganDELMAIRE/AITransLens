@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'">
-  <title>AITransLens</title>
-  <link rel="stylesheet" href="overlay.css">
+  <title>AITransLens — Correction</title>
+  <link rel="stylesheet" href="correction.css">
 </head>
 <body>
   <div id="app">
@@ -13,11 +13,10 @@
     <div class="header" id="drag-handle">
       <span class="brand">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <circle cx="12" cy="12" r="10"/>
-          <line x1="2" y1="12" x2="22" y2="12"/>
-          <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
+          <polyline points="9 11 12 14 22 4"/>
+          <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>
         </svg>
-        AITransLens
+        Correction
       </span>
       <div class="header-actions">
         <button class="icon-btn" id="btn-settings" title="Ouvrir les paramètres">
@@ -35,18 +34,6 @@
       </div>
     </div>
 
-    <!-- Paire de langues -->
-    <div class="lang-bar">
-      <span class="lang-pill" id="source-lang">—</span>
-      <button class="btn-swap" id="btn-swap" title="Inverser les langues" disabled>
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M7 16V4m0 0L3 8m4-4l4 4"/>
-          <path d="M17 8v12m0 0l4-4m-4 4l-4-4"/>
-        </svg>
-      </button>
-      <select class="lang-target-select" id="target-lang-select" aria-label="Langue de sortie"></select>
-    </div>
-
     <!-- Zone principale -->
     <div class="body">
       <p class="source-text" id="source-text"></p>
@@ -55,9 +42,9 @@
       <div id="result-area">
         <div class="state-loading" id="state-loading">
           <div class="spinner"></div>
-          <span>Traduction en cours…</span>
+          <span>Correction en cours…</span>
         </div>
-        <p class="translation" id="translation-text" hidden></p>
+        <p class="result-text" id="result-text" hidden></p>
         <p class="error-msg" id="error-msg" hidden></p>
       </div>
     </div>
@@ -81,6 +68,6 @@
     </div>
 
   </div>
-  <script src="overlay.js"></script>
+  <script src="correction.js"></script>
 </body>
 </html>

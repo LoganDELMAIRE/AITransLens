@@ -68,6 +68,20 @@
       <section class="card">
         <h2 class="section-title">Traduction</h2>
 
+        <div class="field field-row">
+          <label for="show-translate-button">Afficher le bouton flottant</label>
+          <label class="toggle">
+            <input type="checkbox" id="show-translate-button" checked>
+            <span class="toggle-track"></span>
+          </label>
+        </div>
+
+        <div class="field">
+          <label>Raccourci clavier</label>
+          <input type="text" id="hotkey" placeholder="Cliquez puis appuyez sur une combinaison…" readonly>
+          <p class="hint">Ex : Ctrl+Shift+T &nbsp;·&nbsp; Ctrl+Shift+Space</p>
+        </div>
+
         <div class="lang-row">
           <div class="field flex1">
             <label for="source-lang">Langue source</label>
@@ -81,15 +95,52 @@
         </div>
       </section>
 
-      <!-- Section Overlay -->
+      <!-- Section Correction -->
       <section class="card">
-        <h2 class="section-title">Overlay</h2>
+        <h2 class="section-title">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="color:#2da574">
+            <polyline points="9 11 12 14 22 4"/>
+            <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>
+          </svg>
+          Correction
+        </h2>
+
+        <div class="field field-row">
+          <label for="show-correct-button">Afficher le bouton flottant</label>
+          <label class="toggle">
+            <input type="checkbox" id="show-correct-button" checked>
+            <span class="toggle-track"></span>
+          </label>
+        </div>
 
         <div class="field">
           <label>Raccourci clavier</label>
-          <input type="text" id="hotkey" placeholder="Cliquez puis appuyez sur une combinaison…" readonly>
-          <p class="hint">Ex : Ctrl+Shift+T &nbsp;·&nbsp; Ctrl+Shift+Space</p>
+          <input type="text" id="correction-hotkey" placeholder="Cliquez puis appuyez sur une combinaison…" readonly>
+          <p class="hint">Ex : Ctrl+Shift+C &nbsp;·&nbsp; Ctrl+Shift+Space</p>
         </div>
+
+        <div class="field">
+          <label for="correction-style">Style de correction</label>
+          <select id="correction-style">
+            <option value="standard">Standard — grammaire &amp; orthographe</option>
+            <option value="formal">Formel — ton professionnel</option>
+            <option value="concise">Concis — raccourcir &amp; clarifier</option>
+            <option value="fluent">Fluide — langage naturel</option>
+          </select>
+          <p class="hint">Définit l'intention de la correction appliquée au texte.</p>
+        </div>
+
+        <div class="field">
+          <label for="correction-lang">Langue de sortie</label>
+          <select id="correction-lang"></select>
+          <p class="hint">Forcer une langue de sortie, ou conserver la langue du texte original.</p>
+        </div>
+
+      </section>
+
+      <!-- Section Overlay -->
+      <section class="card">
+        <h2 class="section-title">Overlay</h2>
 
         <div class="field">
           <label for="auto-dismiss">Fermeture automatique</label>

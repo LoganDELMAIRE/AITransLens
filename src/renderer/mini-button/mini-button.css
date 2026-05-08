@@ -7,12 +7,19 @@ html, body {
   height: 100%;
 }
 
-#btn {
+#container {
+  display: flex;
+  gap: 5px;
+  width: 100%;
+  height: 100%;
+}
+
+button {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 5px 12px 5px 9px;
-  background: #7c5cfc;
+  justify-content: center;
+  gap: 5px;
+  flex: 1;
   border: none;
   border-radius: 20px;
   color: #fff;
@@ -21,16 +28,22 @@ html, body {
   font-weight: 600;
   cursor: pointer;
   white-space: nowrap;
-  box-shadow: 0 4px 16px rgba(124, 92, 252, 0.45), 0 2px 6px rgba(0,0,0,0.3);
-  transition: background 0.15s, transform 0.1s;
   -webkit-app-region: no-drag;
-  width: 100%;
-  height: 100%;
-  justify-content: center;
+  transition: filter 0.15s, transform 0.1s;
 }
 
-#btn:hover  { background: #9374fd; transform: scale(1.04); }
-#btn:active { transform: scale(0.97); }
+button:hover  { filter: brightness(1.15); transform: scale(1.04); }
+button:active { transform: scale(0.97); }
+
+#btn-translate {
+  background: #7c5cfc;
+  box-shadow: 0 4px 14px rgba(124, 92, 252, 0.45), 0 2px 6px rgba(0,0,0,0.3);
+}
+
+#btn-correct {
+  background: #2da574;
+  box-shadow: 0 4px 14px rgba(45, 165, 116, 0.45), 0 2px 6px rgba(0,0,0,0.3);
+}
 
 @keyframes pop-in {
   from { opacity: 0; transform: scale(0.7); }

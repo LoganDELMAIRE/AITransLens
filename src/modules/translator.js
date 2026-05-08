@@ -183,6 +183,51 @@ Text: ${trimmed}`;
     }
   }
 
+  /**
+   * @param {string} text
+   * @returns {Promise<string>}
+   */
+  /**
+   * @param {string} text
+   * @param {'standard'|'formal'|'concise'|'fluent'} style
+   * @param {string} lang  ISO 639-1 ou 'auto'
+   * @returns {Promise<string>}
+   */
+  async correct(text, style = 'standard', lang = 'auto') {
+    if (!this._model) this._init();
+    const trimmed = text.trim();
+    if (!trimmed) return '';
+
+    const cacheKey = `correct||${trimmed}||${style}||${lang}`;
+    if (this._cache.has(cacheKey)) return this._cache.get(cacheKey);
+
+    const styleInstructions = {
+      standard: 'Correct the grammar and spelling of the following text. Keep the same language, tone, and style.',
+      formal:   'Rewrite the following text in a formal, professional tone. Correct any grammar and spelling errors.',
+      concise:  'Rewrite the following text to be more concise and clear, removing redundancy. Correct any grammar errors.',
+      fluent:   'Rewrite the following text to sound more natural and fluent. Correct any grammar and spelling errors.',
+    };
+
+    const instruction = styleInstructions[style] || styleInstructions.standard;
+    const langInstruction = (lang && lang !== 'auto')
+      ? ` Respond in ${LANG_NAMES[lang] || lang}.`
+      : ' Keep the original language.';
+
+    const prompt = `${instruction}${langInstruction} Return only the corrected text, no explanations:\n\n${trimmed}`;
+
+    try {
+      const result = await this._model.generateContent(prompt);
+      const corrected = result.response.text().trim();
+      if (this._cache.size >= this._cacheLimit) {
+        this._cache.delete(this._cache.keys().next().value);
+      }
+      this._cache.set(cacheKey, corrected);
+      return corrected;
+    } catch (err) {
+      throw this._normalizeError(err);
+    }
+  }
+
   /** Invalide le modèle (ex: changement de clé API) */
   invalidate() {
     this._model = null;

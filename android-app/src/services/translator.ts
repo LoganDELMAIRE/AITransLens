@@ -109,6 +109,39 @@ Text: ${text}`;
     }
   }
 
+  async correct(text: string, style: string = 'standard', lang: string = 'auto'): Promise<string> {
+    if (!this.model) throw new Error('Traducteur non initialisé. Configurez votre clé API.');
+
+    const cacheKey = `correct:${style}:${lang}:${text}`;
+    if (this.cache.has(cacheKey)) return this.cache.get(cacheKey)!;
+
+    const styleInstructions: Record<string, string> = {
+      standard: 'Correct the grammar and spelling of the following text. Keep the same language, tone, and style.',
+      formal:   'Rewrite the following text in a formal, professional tone. Correct any grammar and spelling errors.',
+      concise:  'Rewrite the following text to be more concise and clear, removing redundancy. Correct any grammar errors.',
+      fluent:   'Rewrite the following text to sound more natural and fluent. Correct any grammar and spelling errors.',
+    };
+
+    const instruction = styleInstructions[style] ?? styleInstructions.standard;
+    const langInstruction = lang && lang !== 'auto'
+      ? ` Respond in ${LANGUAGE_NAMES[lang] ?? lang}.`
+      : ' Keep the original language.';
+
+    const prompt = `${instruction}${langInstruction} Return ONLY the corrected text:\n\n${text}`;
+
+    try {
+      const result = await this.model.generateContent(prompt);
+      const corrected = result.response.text().trim();
+      if (this.cache.size >= this.MAX_CACHE) {
+        this.cache.delete(this.cache.keys().next().value!);
+      }
+      this.cache.set(cacheKey, corrected);
+      return corrected;
+    } catch (error: unknown) {
+      throw this.handleError(error);
+    }
+  }
+
   private handleError(error: unknown): Error {
     const e = error as { status?: number; message?: string };
     if (e?.status === 429) return new Error('Quota API dépassé. Réessayez dans quelques instants.');

@@ -34,6 +34,9 @@ const DEFAULTS = {
   hotkey: 'CommandOrControl+Shift+T',
   overlayOpacity: 0.97,
   autoDismissDelay: 10,
+  correctionHotkey: 'CommandOrControl+Shift+C',
+  correctionStyle: 'standard',
+  correctionLang: 'auto',
 };
 
 /* ---- Helpers ---- */
@@ -75,24 +78,56 @@ function fillForm(cfg) {
   $('auto-dismiss').value   = String(cfg.autoDismissDelay ?? DEFAULTS.autoDismissDelay);
   $('hotkey-badge').textContent = formatHotkeyDisplay(cfg.hotkey || DEFAULTS.hotkey);
 
+  $('correction-hotkey').value  = formatHotkeyDisplay(cfg.correctionHotkey || DEFAULTS.correctionHotkey);
+  $('correction-style').value   = cfg.correctionStyle || DEFAULTS.correctionStyle;
+  currentCorrectionHotkey = cfg.correctionHotkey || DEFAULTS.correctionHotkey;
+
+  $('show-translate-button').checked = cfg.showTranslateButton !== false;
+  $('show-correct-button').checked   = cfg.showCorrectButton   !== false;
+
   populateLangSelect('source-lang', cfg.sourceLang || 'auto', true);
   populateLangSelect('target-lang', cfg.targetLang || 'fr', false);
+  populateCorrectionLang(cfg.correctionLang || DEFAULTS.correctionLang);
 }
 
 /* ---- Lecture du formulaire ---- */
 function readForm() {
   return {
-    apiKey:           $('api-key').value.trim(),
-    model:            $('model').value,
-    sourceLang:       $('source-lang').value,
-    targetLang:       $('target-lang').value,
-    hotkey:           currentHotkey,
-    overlayOpacity:   parseInt($('opacity').value, 10) / 100,
-    autoDismissDelay: parseInt($('auto-dismiss').value, 10),
+    apiKey:               $('api-key').value.trim(),
+    model:                $('model').value,
+    sourceLang:           $('source-lang').value,
+    targetLang:           $('target-lang').value,
+    hotkey:               currentHotkey,
+    overlayOpacity:       parseInt($('opacity').value, 10) / 100,
+    autoDismissDelay:     parseInt($('auto-dismiss').value, 10),
+    correctionHotkey:     currentCorrectionHotkey,
+    correctionStyle:      $('correction-style').value,
+    correctionLang:       $('correction-lang').value,
+    showTranslateButton:  $('show-translate-button').checked,
+    showCorrectButton:    $('show-correct-button').checked,
   };
 }
 
-/* ---- Capture du raccourci ---- */
+/* ---- Langue de correction ---- */
+function populateCorrectionLang(selected) {
+  const select = $('correction-lang');
+  select.innerHTML = '';
+  const autoOpt = document.createElement('option');
+  autoOpt.value = 'auto';
+  autoOpt.textContent = 'Conserver la langue originale';
+  if (selected === 'auto') autoOpt.selected = true;
+  select.appendChild(autoOpt);
+  for (const { code, label } of LANGUAGES) {
+    if (code === 'auto') continue;
+    const opt = document.createElement('option');
+    opt.value = code;
+    opt.textContent = label;
+    if (code === selected) opt.selected = true;
+    select.appendChild(opt);
+  }
+}
+
+/* ---- Capture du raccourci traduction ---- */
 let currentHotkey = DEFAULTS.hotkey;
 
 $('hotkey').addEventListener('focus', () => {
@@ -118,6 +153,35 @@ $('hotkey').addEventListener('keydown', (e) => {
     currentHotkey = parts.join('+');
     $('hotkey').value = formatHotkeyDisplay(currentHotkey);
     $('hotkey').blur();
+  }
+});
+
+/* ---- Capture du raccourci correction ---- */
+let currentCorrectionHotkey = DEFAULTS.correctionHotkey;
+
+$('correction-hotkey').addEventListener('focus', () => {
+  $('correction-hotkey').value = 'Appuyez sur une combinaison…';
+  $('correction-hotkey').classList.add('capturing');
+});
+
+$('correction-hotkey').addEventListener('blur', () => {
+  $('correction-hotkey').classList.remove('capturing');
+  $('correction-hotkey').value = formatHotkeyDisplay(currentCorrectionHotkey);
+});
+
+$('correction-hotkey').addEventListener('keydown', (e) => {
+  e.preventDefault();
+  const parts = [];
+  if (e.ctrlKey || e.metaKey) parts.push('CommandOrControl');
+  if (e.altKey)  parts.push('Alt');
+  if (e.shiftKey) parts.push('Shift');
+
+  const key = e.key;
+  if (!['Control', 'Alt', 'Shift', 'Meta'].includes(key)) {
+    parts.push(key.length === 1 ? key.toUpperCase() : key);
+    currentCorrectionHotkey = parts.join('+');
+    $('correction-hotkey').value = formatHotkeyDisplay(currentCorrectionHotkey);
+    $('correction-hotkey').blur();
   }
 });
 
@@ -191,7 +255,8 @@ $('btn-save').addEventListener('click', async () => {
 /* ---- Réinitialiser ---- */
 $('btn-reset').addEventListener('click', async () => {
   if (!confirm('Réinitialiser tous les paramètres ?')) return;
-  currentHotkey = DEFAULTS.hotkey;
+  currentHotkey           = DEFAULTS.hotkey;
+  currentCorrectionHotkey = DEFAULTS.correctionHotkey;
   await window.api.saveConfig({ ...DEFAULTS });
   fillForm(DEFAULTS);
   setStatus('Paramètres réinitialisés.', 'ok');
@@ -200,6 +265,15 @@ $('btn-reset').addEventListener('click', async () => {
 /* ---- Démarrage automatique ---- */
 $('startup').addEventListener('change', async () => {
   await window.api.setLoginItem($('startup').checked);
+});
+
+/* ---- Boutons flottants ---- */
+$('show-translate-button').addEventListener('change', async () => {
+  await window.api.saveConfig({ showTranslateButton: $('show-translate-button').checked });
+});
+
+$('show-correct-button').addEventListener('change', async () => {
+  await window.api.saveConfig({ showCorrectButton: $('show-correct-button').checked });
 });
 
 /* ---- Init ---- */

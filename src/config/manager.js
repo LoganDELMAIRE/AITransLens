@@ -10,6 +10,11 @@ const DEFAULTS = {
   hotkey: 'CommandOrControl+Shift+T',
   overlayOpacity: 0.97,
   autoDismissDelay: 10,
+  correctionHotkey: 'CommandOrControl+Shift+C',
+  correctionStyle: 'standard',
+  correctionLang: 'auto',
+  showTranslateButton: true,
+  showCorrectButton: true,
 };
 
 class ConfigManager {

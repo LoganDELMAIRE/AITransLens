@@ -9,6 +9,7 @@ contextBridge.exposeInMainWorld('api', {
 
   // Translation
   translate: (text, src, tgt) => ipcRenderer.invoke('translate', text, src, tgt),
+  correctText: (text) => ipcRenderer.invoke('correct-text', text),
 
   // Clipboard
   copyToClipboard: (text) => ipcRenderer.invoke('copy-to-clipboard', text),
@@ -32,7 +33,16 @@ contextBridge.exposeInMainWorld('api', {
 
   // Mini bouton
   triggerTranslation: () => ipcRenderer.invoke('trigger-translation'),
+  triggerCorrection: () => ipcRenderer.invoke('trigger-correction'),
   closeMiniButton: () => ipcRenderer.invoke('close-mini-button'),
+  onMiniButtonConfig: (cb) => ipcRenderer.on('mini-button-config', (_e, cfg) => cb(cfg)),
+
+  // Correction overlay
+  closeCorrection: () => ipcRenderer.invoke('close-correction'),
+  correctionReady: () => ipcRenderer.send('correction-ready'),
+  onShowCorrection: (cb) => {
+    ipcRenderer.on('show-correction', (_e, data) => cb(data));
+  },
 
   // Remplacement du texte sélectionné
   replaceSelectedText: (translation) => ipcRenderer.invoke('replace-selected-text', translation),

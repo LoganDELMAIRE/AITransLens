@@ -31,12 +31,19 @@ const MODELS = [
   { id: 'gemini-2.0-flash', label: 'Gemini 2.0 Flash' },
 ];
 
+const CORRECTION_STYLES = [
+  { id: 'standard', label: 'Standard', desc: 'Grammaire & orthographe' },
+  { id: 'formal',   label: 'Formel',   desc: 'Ton professionnel' },
+  { id: 'concise',  label: 'Concis',   desc: 'Raccourcir & clarifier' },
+  { id: 'fluent',   label: 'Fluide',   desc: 'Langage naturel' },
+];
+
 export function SettingsScreen({ navigation }: Props) {
   const [config, setConfig] = useState<AppConfig | null>(null);
   const [apiKeyVisible, setApiKeyVisible] = useState(false);
   const [isTesting, setIsTesting] = useState(false);
   const [testResult, setTestResult] = useState<{ ok: boolean; msg: string } | null>(null);
-  const [langModalFor, setLangModalFor] = useState<'source' | 'target' | null>(null);
+  const [langModalFor, setLangModalFor] = useState<'source' | 'target' | 'correctionLang' | null>(null);
   const [dirty, setDirty] = useState(false);
   const [hasOverlay, setHasOverlay] = useState(false);
   const [hasAccessibility, setHasAccessibility] = useState(false);
@@ -272,6 +279,39 @@ export function SettingsScreen({ navigation }: Props) {
           )}
         </View>
 
+        <SectionHeader title="Correction" color={colors.success} />
+        <View style={styles.card}>
+          <View style={styles.field}>
+            <Text style={styles.label}>Style de correction</Text>
+            {CORRECTION_STYLES.map(s => (
+              <TouchableOpacity
+                key={s.id}
+                style={styles.radioRow}
+                onPress={() => update('correctionStyle', s.id)}
+              >
+                <View style={[styles.radio, config.correctionStyle === s.id && styles.radioSelectedGreen]}>
+                  {config.correctionStyle === s.id && <View style={styles.radioDotGreen} />}
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.radioLabel}>{s.label}</Text>
+                  <Text style={styles.radioDesc}>{s.desc}</Text>
+                </View>
+              </TouchableOpacity>
+            ))}
+          </View>
+
+          <View style={styles.divider} />
+
+          <TouchableOpacity style={styles.settingRow} onPress={() => setLangModalFor('correctionLang')}>
+            <Text style={styles.settingLabel}>Langue de sortie</Text>
+            <Text style={styles.settingValue}>
+              {config.correctionLang === 'auto' || !config.correctionLang
+                ? 'Langue originale'
+                : config.correctionLang.toUpperCase()}
+            </Text>
+          </TouchableOpacity>
+        </View>
+
         <SectionHeader title="Données" />
         <View style={styles.card}>
           <TouchableOpacity style={styles.settingRow} onPress={handleClearHistory}>
@@ -309,12 +349,18 @@ export function SettingsScreen({ navigation }: Props) {
         onSelect={v => update('targetLang', v)}
         onClose={() => setLangModalFor(null)}
       />
+      <LanguageSelector
+        visible={langModalFor === 'correctionLang'}
+        selected={config.correctionLang ?? 'auto'}
+        onSelect={v => update('correctionLang', v)}
+        onClose={() => setLangModalFor(null)}
+      />
     </SafeAreaView>
   );
 }
 
-function SectionHeader({ title }: { title: string }) {
-  return <Text style={styles.sectionHeader}>{title}</Text>;
+function SectionHeader({ title, color }: { title: string; color?: string }) {
+  return <Text style={[styles.sectionHeader, color ? { color } : undefined]}>{title}</Text>;
 }
 
 function PermissionRow({ label, granted, onPress }: { label: string; granted: boolean; onPress: () => void }) {
@@ -376,9 +422,12 @@ const styles = StyleSheet.create({
     borderWidth: 2, borderColor: colors.border,
     alignItems: 'center', justifyContent: 'center',
   },
-  radioSelected: { borderColor: colors.primary },
-  radioDot: { width: 10, height: 10, borderRadius: 5, backgroundColor: colors.primary },
-  radioLabel: { fontSize: 14, color: colors.text, flex: 1 },
+  radioSelected:      { borderColor: colors.primary },
+  radioSelectedGreen: { borderColor: colors.success },
+  radioDot:           { width: 10, height: 10, borderRadius: 5, backgroundColor: colors.primary },
+  radioDotGreen:      { width: 10, height: 10, borderRadius: 5, backgroundColor: colors.success },
+  radioLabel: { fontSize: 14, color: colors.text },
+  radioDesc:  { fontSize: 12, color: colors.textMuted, marginTop: 1 },
   testRow: { padding: spacing.md, gap: 10 },
   testBtn: {
     paddingHorizontal: 16, paddingVertical: 10,

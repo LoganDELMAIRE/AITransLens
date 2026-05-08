@@ -17,12 +17,14 @@ const ps1Path = app.isPackaged
 const selectionMonitor = new SelectionMonitor(ps1Path);
 let translator = null;
 let overlayWindow = null;
+let correctionWindow = null;
 let settingsWindow = null;
 let miniButtonWindow = null;
 let tray = null;
 
 /** Données en attente pour l'overlay. @type {object|null} */
 let pendingData = null;
+let pendingCorrectionData = null;
 
 /**
  * Texte capturé au moment où le mini bouton a été affiché.
@@ -58,22 +60,28 @@ function positionNearCursor(win, w, h, offsetY = 24) {
 // ---------------------------------------------------------------------------
 
 function showMiniButton() {
-  // Ne pas afficher si l'overlay de traduction est ouvert
   if (overlayWindow && !overlayWindow.isDestroyed()) return;
+  if (correctionWindow && !correctionWindow.isDestroyed()) return;
 
   if (miniButtonWindow && !miniButtonWindow.isDestroyed()) {
-    return; // déjà visible, ne pas repositionner
+    return;
   }
 
+  const showTranslate = config.get('showTranslateButton') !== false;
+  const showCorrect   = config.get('showCorrectButton') !== false;
+  if (!showTranslate && !showCorrect) return;
+
+  const W = (showTranslate && showCorrect) ? 210 : 110;
+
   miniButtonWindow = new BrowserWindow({
-    width: 110,
+    width: W,
     height: 30,
     transparent: true,
     frame: false,
     alwaysOnTop: true,
     skipTaskbar: true,
     resizable: false,
-    focusable: false, // ne vole jamais le focus → l'app source garde sa sélection active
+    focusable: false,
     show: false,
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
@@ -86,11 +94,9 @@ function showMiniButton() {
   miniButtonWindow.setAlwaysOnTop(true, 'screen-saver');
 
   miniButtonWindow.once('ready-to-show', () => {
-    positionNearCursor(miniButtonWindow, 110, 30, 18);
+    positionNearCursor(miniButtonWindow, W, 30, 18);
     miniButtonWindow.showInactive();
-
-    // focusable:false → blur ne se déclenche jamais.
-    // La fermeture "click ailleurs" est gérée par l'event 'mousedown' émis par le PS1.
+    miniButtonWindow.webContents.send('mini-button-config', { showTranslate, showCorrect });
   });
 
   miniButtonWindow.on('closed', () => { miniButtonWindow = null; });
@@ -233,6 +239,67 @@ function createOverlayWindow() {
 }
 
 // ---------------------------------------------------------------------------
+// Fenêtre correction
+// ---------------------------------------------------------------------------
+
+function createCorrectionWindow() {
+  if (correctionWindow && !correctionWindow.isDestroyed()) {
+    correctionWindow.destroy();
+  }
+  if (overlayWindow && !overlayWindow.isDestroyed()) {
+    overlayWindow.destroy();
+  }
+
+  hideMiniButton();
+  overlayBlurGuardUntil = Date.now() + 1200;
+
+  const W = 480, H = 240;
+
+  correctionWindow = new BrowserWindow({
+    width: W,
+    height: H,
+    transparent: true,
+    frame: false,
+    alwaysOnTop: true,
+    skipTaskbar: true,
+    resizable: false,
+    focusable: true,
+    show: false,
+    webPreferences: {
+      preload: path.join(__dirname, 'preload.js'),
+      contextIsolation: true,
+      nodeIntegration: false,
+    },
+  });
+
+  correctionWindow.loadFile(path.join(__dirname, 'renderer/correction/index.html'));
+  correctionWindow.setAlwaysOnTop(true, 'screen-saver');
+
+  correctionWindow.once('ready-to-show', () => {
+    positionNearCursor(correctionWindow, W, H);
+    correctionWindow.show();
+    app.focus({ steal: true });
+    correctionWindow.focus();
+
+    correctionWindow.on('blur', () => {
+      if (!correctionWindow || correctionWindow.isDestroyed()) return;
+      if (Date.now() < overlayBlurGuardUntil) return;
+      correctionWindow.close();
+    });
+
+    const checkAfterGuard = () => {
+      if (!correctionWindow || correctionWindow.isDestroyed()) return;
+      const remaining = overlayBlurGuardUntil - Date.now();
+      if (remaining > 0) { setTimeout(checkAfterGuard, remaining + 50); return; }
+      if (!correctionWindow.isFocused()) correctionWindow.close();
+    };
+    setTimeout(checkAfterGuard, overlayBlurGuardUntil - Date.now() + 50);
+  });
+
+  correctionWindow.on('closed', () => { correctionWindow = null; });
+}
+
+// ---------------------------------------------------------------------------
 // Fenêtre paramètres
 // ---------------------------------------------------------------------------
 
@@ -244,7 +311,7 @@ function createSettingsWindow() {
 
   settingsWindow = new BrowserWindow({
     width: 520,
-    height: 620,
+    height: 720,
     title: 'AITransLens — Paramètres',
     resizable: false,
     icon: path.join(__dirname, '../assets/icon.png'),
@@ -304,18 +371,52 @@ async function triggerTranslation() {
   }
 }
 
+async function triggerCorrection() {
+  uiaSelectionActive = false;
+  const text = (capturedText || clipboard.readText()).trim();
+  capturedText = '';
+  if (!text) return;
+
+  pendingCorrectionData = { originalText: text, correctedText: null, loading: true };
+  createCorrectionWindow();
+
+  try {
+    const { correctionStyle, correctionLang } = config.getAll();
+    const corrected = await getTranslator().correct(text, correctionStyle, correctionLang);
+    const data = { originalText: text, correctedText: corrected, loading: false };
+    pendingCorrectionData = data;
+    if (correctionWindow && !correctionWindow.isDestroyed()) {
+      correctionWindow.webContents.send('show-correction', data);
+    }
+  } catch (err) {
+    const data = { originalText: text, correctedText: null, loading: false, error: err.message };
+    pendingCorrectionData = data;
+    if (correctionWindow && !correctionWindow.isDestroyed()) {
+      correctionWindow.webContents.send('show-correction', data);
+    }
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Raccourci global
 // ---------------------------------------------------------------------------
 
-function registerHotkey() {
+function registerHotkeys() {
   globalShortcut.unregisterAll();
+
   const hotkey = config.get('hotkey') || 'CommandOrControl+Shift+T';
   try {
     globalShortcut.register(hotkey, triggerTranslation);
   } catch {
     globalShortcut.register('CommandOrControl+Shift+T', triggerTranslation);
     config.set('hotkey', 'CommandOrControl+Shift+T');
+  }
+
+  const correctionHotkey = config.get('correctionHotkey') || 'CommandOrControl+Shift+C';
+  if (correctionHotkey && correctionHotkey !== hotkey) {
+    try {
+      globalShortcut.register(correctionHotkey, triggerCorrection);
+    } catch { /* ignore si conflit */ }
   }
 }
 
@@ -367,12 +468,16 @@ app.whenReady().then(() => {
     if ('apiKey' in partial || 'model' in partial) {
       if (translator) { translator.invalidate(); translator = null; }
     }
-    if ('hotkey' in partial) registerHotkey();
+    if ('hotkey' in partial || 'correctionHotkey' in partial) registerHotkeys();
     return config.getAll();
   });
 
   ipcMain.handle('translate', async (_, text, src, tgt) => {
     return getTranslator().translate(text, src, tgt);
+  });
+
+  ipcMain.handle('correct-text', async (_, text) => {
+    return getTranslator().correct(text);
   });
 
   ipcMain.handle('copy-to-clipboard', (_, text) => {
@@ -397,11 +502,21 @@ app.whenReady().then(() => {
   });
 
   ipcMain.handle('trigger-translation', () => triggerTranslation());
+  ipcMain.handle('trigger-correction',  () => triggerCorrection());
   ipcMain.handle('close-mini-button',   () => hideMiniButton());
+
+  ipcMain.handle('close-correction', () => {
+    if (correctionWindow && !correctionWindow.isDestroyed()) correctionWindow.close();
+  });
+
+  ipcMain.on('correction-ready', (event) => {
+    if (pendingCorrectionData) event.sender.send('show-correction', pendingCorrectionData);
+  });
 
   ipcMain.handle('replace-selected-text', async (_, translation) => {
     clipboard.writeText(translation);
     if (overlayWindow && !overlayWindow.isDestroyed()) overlayWindow.close();
+    if (correctionWindow && !correctionWindow.isDestroyed()) correctionWindow.close();
     // Laisse le focus revenir à la fenêtre source avant de simuler Ctrl+V
     await new Promise(r => setTimeout(r, 200));
     if (process.platform === 'win32') {
@@ -420,7 +535,7 @@ app.whenReady().then(() => {
 
   // ---- Démarrage ----
 
-  registerHotkey();
+  registerHotkeys();
   startSelectionMonitor();
   try { createTray(); } catch { /* icône manquante */ }
 

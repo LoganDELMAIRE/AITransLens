@@ -118,6 +118,9 @@ h1 {
   text-transform: uppercase;
   letter-spacing: 0.6px;
   color: var(--muted);
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
 
 /* ---- Fields ---- */
@@ -167,6 +170,11 @@ select:focus {
 }
 
 input::placeholder { color: var(--muted); }
+
+input.capturing {
+  border-color: rgba(124,92,252,0.6);
+  color: var(--accent);
+}
 
 select option { background: #1e1e2a; color: var(--text); }
 

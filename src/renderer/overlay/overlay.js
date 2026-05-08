@@ -21,9 +21,7 @@ let syncingTargetSelect = false;
 
 /* ---- Helpers ---- */
 function $(id) { return document.getElementById(id); }
-
 function langLabel(code) { return LANG_LABELS[code] || code.toUpperCase(); }
-
 function truncate(text, max = 100) {
   return text.length > max ? text.slice(0, max) + '…' : text;
 }
@@ -96,7 +94,6 @@ document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape') window.api.closeOverlay();
 });
 
-// Empêche le blur du dropdown de fermer la popup
 $('target-lang-select').addEventListener('mousedown', () => {
   window.api.setOverlayBlurGuard(1400);
 });
